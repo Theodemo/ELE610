@@ -1,0 +1,21 @@
+numpy
+matplotlib
+opencv-python
+opencv-contrib-python
+requests
+pyzbar
+cmd2
+bleak
+
+pyqt5
+pyqtchart
+
+#commonly used
+pyueye
+qimage2ndarray
+rwsuis
+
+#usefull
+scipy
+pandas
+alive-progress
