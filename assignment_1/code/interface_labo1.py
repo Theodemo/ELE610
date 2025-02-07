@@ -352,5 +352,5 @@ def count_black_dots(image_path, threshold_value=40):
     return num_black_dots
 
 # Example usage
-num_dots = count_black_dots('C:/Users/theod/Documents/UIS/IA/py/Assignement_1/image/circle.png')
+num_dots = count_black_dots('assignment_1/image/circle.png')
 print(f"Number of black dots: {num_dots}")
