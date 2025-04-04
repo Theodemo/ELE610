@@ -29,7 +29,7 @@ try:
 	from PyQt5.QtCore import Qt, QPoint, QT_VERSION_STR  
 	from PyQt5.QtGui import QImage, QPixmap, QTransform, QColor
 	from PyQt5.QtWidgets import (QApplication, QAction, QFileDialog, QLabel, 
-			QGraphicsPixmapItem, QInputDialog)  # QColorDialog, 
+			QGraphicsPixmapItem, QInputDialog, QMessageBox)  # QColorDialog, 
 except ImportError:
 	raise ImportError( f"{_appFileName}: Requires PyQt5." )
 #end try, import PyQt5 classes 
@@ -102,15 +102,13 @@ class MainWindow(inheritedMainWindow):
 		img = np.array(ptr, dtype=np.uint8).reshape((height, width, 4))
 		img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
 
+		# Guardar una copia limpia de la imagen original sin modificar
+		self.original_img = img.copy()
+
 		# Convertir a escala de grises
 		gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 		# Aplicar un umbral para obtener una imagen binaria (blanco o negro)
 		_, binary_img = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)  # Invertir blanco y negro
-
-		# Mostrar la imagen binaria para verificar la detección
-		cv2.imshow('Binary Image', binary_img)  # Mostrar la imagen binaria
-		cv2.waitKey(0)  # Esperar hasta que se cierre la ventana
-		cv2.destroyAllWindows()
 
 		# Detectar el círculo grande
 		circles = cv2.HoughCircles(binary_img, cv2.HOUGH_GRADIENT, dp=1.2, minDist=100,
@@ -119,54 +117,9 @@ class MainWindow(inheritedMainWindow):
 		if circles is not None:
 			circles = np.uint16(np.around(circles))
 			for (x, y, r) in circles[0, :]:
-				cv2.circle(img, (x, y), r, (0, 255, 0), 2)  # Círculo grande en verde
-				cv2.circle(img, (x, y), 2, (255, 0, 0), 3)  # Centro en azul
-
-				# Radio del círculo interno
-				inner_radius = int(r * 0.9)
-				cv2.circle(img, (x, y), inner_radius, (255, 0, 0), 2)  # Círculo interno en rojo
-
-				# Crear una máscara para la región circular donde buscaremos los puntos
-				mask = np.zeros_like(binary_img)
-				cv2.circle(mask, (x, y), inner_radius, 255, -1)  # Círculo blanco en la máscara
-
-				# Inicializar las variables para el primer y último punto blanco
-				first_white_point = None
-				last_white_point = None
-				first_angle = None
-				last_angle = None
-
-				# Buscar puntos blancos dentro del círculo pequeño
-				for angle in range(360):
-					theta = np.radians(angle)
-					x_p = int(x + inner_radius * np.cos(theta))
-					y_p = int(y + inner_radius * np.sin(theta))
-
-					# Verificar que el punto está dentro de la imagen y dentro de la máscara
-					if 0 <= x_p < width and 0 <= y_p < height and mask[y_p, x_p] == 255:
-						# Si el píxel es blanco (en la imagen binaria)
-						if binary_img[y_p, x_p] == 255:  # 255 significa blanco en la imagen binaria
-							# Guardar el primer y último punto blanco encontrado
-							if first_white_point is None:
-								first_white_point = (x_p, y_p)
-								first_angle = angle
-							last_white_point = (x_p, y_p)
-							last_angle = angle
-
-				# Ahora que tenemos el primer y el último punto blanco, calculamos el ángulo medio
-				if first_white_point is not None and last_white_point is not None:
-					# Calcular el ángulo medio entre el primer y el último punto
-					middle_angle = (first_angle + last_angle) / 2
-					# Asegurarse de que el ángulo esté entre 0 y 360 grados
-					if middle_angle >= 360:
-						middle_angle -= 360
-
-					# Calcular las coordenadas del punto medio
-					middle_x = int(x + inner_radius * np.cos(np.radians(middle_angle)))
-					middle_y = int(y + inner_radius * np.sin(np.radians(middle_angle)))
-
-					# Marcar el punto medio con un círculo rojo
-					cv2.circle(img, (middle_x, middle_y), 5, (0, 0, 255), -1)  # Rojo para el punto medio
+				# Almacenar la información del centro y el radio
+				self.disk_center = (x, y)
+				self.inner_radius = int(r * 0.9)  # Radio del círculo interior
 
 		# Convertir a RGB antes de mostrar en Qt
 		img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -178,32 +131,146 @@ class MainWindow(inheritedMainWindow):
 		return
 
 
-
-
-
-
-
 		
 	def findRedSector(self):
-		"""Find red sector for disc in active image using ??."""
-		print("This function is not ready yet.")
-		print("Different approaches may be used, here we sketch one alternative that may (or may not) work.")
-		#
-		# -- your code may be written in between the comment lines below --
-		# Check color for pixels in a given distance from center [0.75, 0.95]*radius and for all angles [0,1,2, 359]
-		# and give 'score' based on how red the pixel is, red > threshold and red > blue and red > green ??
-		# (score may be adjusted by position, based on illumination of disk)
-		# Find the weighted (based on score) mean position (x,y) for all checked pixels
-		# Find, and print perhaps also show on image, the angle of this mean
-		return
+		"""Find the red sector center in the disk and store it as self.sectorCenter1 (angle in degrees)."""
+		# Asegurarse de que tenemos los datos de la función findDisk
+		if hasattr(self, 'disk_center') and hasattr(self, 'inner_radius'):
+			x, y = self.disk_center
+			inner_radius = self.inner_radius
+
+			# Usar la imagen original sin modificaciones (sin círculos dibujados)
+			img = self.original_img.copy()
+
+			# Convertir a escala de grises
+			gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+			_, binary_img = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
+
+			# Crear una máscara para la región circular
+			mask = np.zeros_like(binary_img)
+			cv2.circle(mask, (x, y), inner_radius, 255, -1)  # Crear una máscara con el círculo
+
+			# Inicializar las variables para el primer y último punto blanco
+			first_white_point = None
+			last_white_point = None
+
+			# Buscar puntos blancos dentro del círculo (y en la máscara)
+			for angle in range(360):
+				theta = np.radians(angle)
+				x_p = int(x + inner_radius * np.cos(theta))
+				y_p = int(y + inner_radius * np.sin(theta))
+
+				if 0 <= x_p < img.shape[1] and 0 <= y_p < img.shape[0] and mask[y_p, x_p] == 255:
+					if binary_img[y_p, x_p] == 255:  # blanco
+						if first_white_point is None:
+							first_white_point = (x_p, y_p)
+						last_white_point = (x_p, y_p)
+
+			# Calcular el ángulo medio entre el primer y el último punto blanco
+			if first_white_point and last_white_point:
+				# Calcular los ángulos en radianes para los dos puntos
+				angle1 = np.arctan2(first_white_point[1] - y, first_white_point[0] - x)
+				angle2 = np.arctan2(last_white_point[1] - y, last_white_point[0] - x)
+
+				# Convertir los ángulos a grados
+				angle1_deg = np.degrees(angle1) % 360
+				angle2_deg = np.degrees(angle2) % 360
+
+				# Calcular el ángulo medio
+				mid_angle = (angle1_deg + angle2_deg) / 2
+
+				# Asegurarse de que el ángulo está dentro del rango [0, 360)
+				if mid_angle >= 360:
+					mid_angle -= 360
+				elif mid_angle < 0:
+					mid_angle += 360
+
+				# Almacenar el ángulo medio
+				self.sectorCenter1 = mid_angle
+
+				# Mostrar el ángulo medio como texto en la imagen (opcional)
+				msg = QMessageBox()
+				msg.setIcon(QMessageBox.Information)
+				msg.setWindowTitle("Angle of the red sector")
+				msg.setText(f"The angle of the red sector is: {self.sectorCenter1:.2f} degrees")
+				msg.setInformativeText("This is the avarage angle of the red sector")
+				msg.setStandardButtons(QMessageBox.Ok)
+				msg.exec_()
+
+			# Dibujar el punto medio en la imagen
+			if first_white_point and last_white_point:
+				mid_x = (first_white_point[0] + last_white_point[0]) // 2
+				mid_y = (first_white_point[1] + last_white_point[1]) // 2
+				cv2.circle(img, (mid_x, mid_y), 5, (0, 255, 255), -1)  # Punto medio en amarillo
+
+			# Convertir a RGB antes de mostrar en Qt
+			img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+			h, w, ch = img.shape
+			bytesPerLine = ch * w
+			qImg = QImage(img.data, w, h, bytesPerLine, QImage.Format_RGB888)
+			self.pixmap = QPixmap.fromImage(qImg)
+			self.curItem.setPixmap(self.pixmap)
+
+
+
+
+
 		
 	def findSpeed(self):
 		"""Find speed for disk using ??."""
 		print("This function is not ready yet.")
 		print("Different approaches may be used, here we sketch one alternative that may (or may not) work.")
-		#
-		# -- your code may be written here --
-		#
+		
+		self.findDisk()
+		self.findRedSector()
+		if not hasattr(self, 'sectorCenter1'):
+			print('Can not calculate the angle of the first image')
+			return
+
+		angle1 = self.sectorCenter1
+		print(f"Angle of the first image: {angle1:.2f} degrees")
+  
+		file_name, _ = QFileDialog.getOpenFileName(self, "Open second image", "", "Image Files (*.png *.jpg *.bmp)")
+		if not file_name:
+			print("No image selected")
+			return
+
+		self.openFile(file_name)
+		self.findDisk()
+		self.findRedSector()
+		if not hasattr(self, 'sectorCenter1'):
+			print('Can not calculate the angle of the second image')
+			return
+
+		angle2 = self.sectorCenter1
+		print(f"Angle of the second image: {angle2:.2f} degrees")
+  
+		angle_diff = abs(angle2 - angle1)
+		if angle_diff > 180:
+			angle_diff = 360 - angle_diff
+  
+		msg = QMessageBox()
+		msg.setIcon(QMessageBox.Information)
+		msg.setWindowTitle("Angle difference")
+		msg.setText(f"The difference between the angle of both images is: {angle_diff:.2f} degrees")
+		msg.setStandardButtons(QMessageBox.Ok)
+		msg.exec()
+  
+		time_diff, ok = QInputDialog.getDouble(self, "Time difference", "Enter the time difference between the two images (in seconds):", min=0.0)
+		if not ok:
+			print("No time difference provided")
+			return
+
+		angular_speed = angle_diff / time_diff
+		print(f"Angular speed: {angular_speed:.2f} degrees per second")
+
+		msg = QMessageBox()
+		msg.setIcon(QMessageBox.Information)
+		msg.setWindowTitle("Angular speed")
+		msg.setText(f"The angular speed of the disk is: {angular_speed:.2f} degrees per second")
+		msg.setStandardButtons(QMessageBox.Ok)
+		msg.exec()
+
 		return
 		
 #end class MainWindow

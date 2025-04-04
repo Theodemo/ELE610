@@ -105,32 +105,42 @@ class MainWindow(inheritedMainWindow):
 	
 	def initMenu2(self):
 		"""Initialize Camera menu."""
-		# print( f"File {_appFileName}: (debug) first line in initMenu2()" ) 
+		# Existing menu items
 		a = self.qaCameraOn = QAction('Camera on', self)
 		a.triggered.connect(self.cameraOn)
-		#
+		
 		a = self.qaCameraInfo = QAction('Print camera info', self)
 		a.triggered.connect(self.printCameraInfo)
-		#
+		
 		a = self.qaGetOneImage = QAction('Get one image', self)
 		a.setShortcut('Ctrl+N')
 		a.triggered.connect(self.getOneImage)
-		#
+		
 		a = self.qaGetOneImageV2 = QAction('Get one image (ver.2 2022)', self)
 		a.triggered.connect(self.getOneImageV2)
-		#
+		
 		a = self.qaCameraOff = QAction('Camera off', self)
 		a.triggered.connect(self.cameraOff)
-		#
+		
+		# New menu item for setting up the trigger
+		a = self.qaSetupTrigger = QAction('Setup Trigger', self)
+		a.triggered.connect(self.setup_trigger)
+		
+		# New menu item for capturing image on trigger
+		a = self.qaCaptureOnTrigger = QAction('Capture on Trigger', self)
+		a.triggered.connect(self.capture_on_trigger_falling_edge)
+		
+		# Adding actions to the camera menu
 		camMenu = self.mainMenu.addMenu('&Camera')
 		camMenu.addAction(self.qaCameraOn)
 		camMenu.addAction(self.qaCameraInfo)
 		camMenu.addAction(self.qaGetOneImage)
 		camMenu.addAction(self.qaGetOneImageV2)
 		camMenu.addAction(self.qaCameraOff)
-		# print( "File {_appFileName}: (debug) last line in initMenu2()" ) 
-		return
-	
+		camMenu.addAction(self.qaSetupTrigger)  # Add setup trigger action
+		camMenu.addAction(self.qaCaptureOnTrigger)  # Add capture on trigger action
+
+		
 # Some methods that may be used by several of the menu actions
 	def setMenuItems2(self):
 		"""Enable/disable menu items as appropriate."""
@@ -333,6 +343,71 @@ class MainWindow(inheritedMainWindow):
 			self.setMenuItems2()
 			print( f"{self.appFileName}: cameraOff() Camera stopped ok" )
 		return
+	def setup_trigger(self):
+		"""Setup the camera for trigger mode."""
+		if ueyeOK and self.camOn:
+			# Set the camera trigger mode (assuming the camera supports hardware triggering)
+			self.cam.set_trigger_mode(ueye.IS_TRIGGER_MODE_FALLING_EDGE)  # Set trigger mode to falling edge
+			print(f"{self.appFileName}: Trigger mode set to falling edge.")
+		else:
+			print("Camera is not on or IDS pyueye is not available.")
+		
+	def capture_on_trigger_falling_edge(self):
+		"""Capture an image on falling edge of the trigger."""
+		if not (ueyeOK and self.camOn):
+			print("Camera not initialized or triggered.")
+			return
+
+		print(f"{self.appFileName}: Waiting for falling edge trigger...")
+
+		# Monitor the trigger pin, waiting for a falling edge
+		while True:
+			trigger_status = self.check_trigger()  # A method to check the current trigger status
+			if trigger_status == 'falling':
+				# If falling edge detected, capture image
+				print(f"{self.appFileName}: Falling edge detected, capturing image.")
+				self.capture_image()
+				break  # Exit loop after capturing one image
+
+	def check_trigger(self):
+		"""Check the status of the trigger signal."""
+		# Check for the trigger falling edge. This depends on your specific camera setup.
+		# For example, if you're using a GPIO pin, you might need to check its state.
+		# Assuming we have a function or hardware access to check trigger:
+		trigger_state = self.get_trigger_state()  # Placeholder for actual trigger check
+		
+		if trigger_state == 'low':
+			return 'falling'  # Triggered by falling edge
+		return 'high'  # No trigger
+
+	def capture_image(self):
+		"""Capture an image and display it."""
+		print(f"{self.appFileName}: Capturing image.")
+		imBuf = ImageBuffer()  # used to get return pointers
+		self.cam.freeze_video(True)
+		retVal = ueye.is_WaitForNextImage(self.cam.handle(), 1000, imBuf.mem_ptr, imBuf.mem_id)
+		
+		if retVal == ueye.IS_SUCCESS:
+			print(f"  ueye.IS_SUCCESS: image buffer id = {imBuf.mem_id}")
+			self.copy_image(ImageData(self.cam.handle(), imBuf))  # Copy image data 
+			if self.npImage.size > 0:
+				self.image = np2qimage(self.npImage)
+				if not self.image.isNull():
+					self.pixmap = QPixmap.fromImage(self.image)
+					if self.curItem:
+						self.scene.removeItem(self.curItem)
+					self.curItem = QGraphicsPixmapItem(self.pixmap)
+					self.scene.addItem(self.curItem)
+					self.scene.setSceneRect(0, 0, self.pixmap.width(), self.pixmap.height())
+					self.setWindowTitle(f"{self.appFileName} : Camera image")
+					self.scaleOne()
+				else:
+					self.pixmap = QPixmap()
+			else:
+				print(f"  No image in buffer {imBuf}")
+		else:
+			print(f"Error capturing image, retVal: {retVal}")
+
 	
 #end class MainWindow
 

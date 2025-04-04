@@ -4,6 +4,7 @@ import numpy as np
 from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, QFileDialog, QLabel, QGridLayout, QWidget
 from PyQt5.QtGui import QPixmap, QImage
 from dialogDiskDetection import DiskDetectionDialog
+from pyueye import ueye
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -17,8 +18,11 @@ class MainWindow(QMainWindow):
             'binary_threshold': 230
         }
         
+        self.camera_h = ueye.HIDS(0)  # Handle for the camera (assuming the first camera)
         self.initUI()
         self.initMenu()
+        
+        
 
     def initUI(self):
         # Widget principal
@@ -40,17 +44,28 @@ class MainWindow(QMainWindow):
         menubar = self.menuBar()
         file_menu = menubar.addMenu('File')
         disk_menu = menubar.addMenu('Disk')
+        camera_menu = menubar.addMenu('Camera')  # New Camera menu
 
         open_action = QAction('Open', self)
-        open_action.setShortcut('Ctrl+O')
         open_action.triggered.connect(self.openFile)
         file_menu.addAction(open_action)
-        
         
         detect_disk_action = QAction('Detect Disk', self)
         detect_disk_action.triggered.connect(self.showDiskDetectionDialog)
         disk_menu.addAction(detect_disk_action)
         
+        start_camera_action = QAction('Start Camera', self)
+        start_camera_action.triggered.connect(self.cameraOn)
+        camera_menu.addAction(start_camera_action)
+        
+        stop_camera_action = QAction('Stop Camera', self)
+        stop_camera_action.triggered.connect(self.cameraOff)
+        camera_menu.addAction(stop_camera_action)
+        
+        capture_action = QAction('Capture Image', self)
+        capture_action.triggered.connect(self.captureImage)
+        camera_menu.addAction(capture_action)
+
     def showDiskDetectionDialog(self):
         # Ouvrir le dialogue pour configurer la détection du disque
         dialog = DiskDetectionDialog(self, self.disk_settings)
@@ -60,7 +75,6 @@ class MainWindow(QMainWindow):
         # Mettre à jour les paramètres de détection des disques
         self.disk_settings = new_settings
 
-        
     def openFile(self):
         file_name, _ = QFileDialog.getOpenFileName(self, 'Open File', '', 'Images (*.png *.xpm *.jpg)')
         if file_name:
@@ -68,6 +82,18 @@ class MainWindow(QMainWindow):
             img = cv2.imread(file_name)
             self.displayImage(img, 0, 0)  # Affichage de l'image originale
             
+    def closeEvent(self, event):
+        # Cleanly stop the camera when closing the app
+        self.cam.stop()
+        event.accept()
+
+    def captureImage(self):
+        # Capture image from the camera
+        img = self.cam.capture()
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)  # Convert RGB to BGR for display
+        self.displayImage(img, 0, 0)  # Display captured image in top-left cel
+        
+
     def detect_disk(self):
         inverse_ratio = 1
         min_distance = 15
@@ -166,4 +192,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
