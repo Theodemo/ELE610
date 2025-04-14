@@ -64,28 +64,53 @@ Dans ce cas, on peut reconstruire la position réelle du point ainsi :
 
 ---
 
-### Estimation de la matrice intrinsèque $\mathbf{K}$
+### Calibration de caméra sans échiquier
 
-Pour estimer $\mathbf{K}$, on procède à une **calibration de caméra** :
+Il est possible de calibrer une caméra **sans utiliser de motif d’échiquier**, à condition de disposer de plusieurs images avec :
 
-1. On imprime un motif connu (ex : **échiquier**).
-2. On prend plusieurs photos du motif sous différents angles.
-3. On détecte automatiquement les coins du motif (fonction `cv2.findChessboardCorners`).
-4. On utilise `cv2.calibrateCamera()` pour estimer :
-   - Les paramètres intrinsèques $\mathbf{K}$,
-   - Les distorsions optiques,
-   - Et éventuellement la position de la caméra pour chaque image.
+- Des **points 3D connus** dans un repère fixe (monde/table/etc.)
+- Les **projections 2D** correspondantes dans l’image (pixels)
+
+---
+
+#### Conditions nécessaires
+
+1. **Plusieurs images** (au moins 10, idéalement)
+2. Au moins **6–8 points** bien répartis dans chaque image
+3. Les points doivent être vus **sous différents angles** (pas toujours la même position de la caméra)
+4. Les points doivent être **non-coplanaires** si possible (ou bien répartis dans l'image si en 2D)
+
+---
+
+#### Étapes du pipeline
+
+1. Pour chaque image :
+   - Identifier les points 3D réels (en mm, cm…)
+   - Repérer les points 2D correspondants dans l’image (en pixels)
+
+2. Remplir deux listes :
+   - `object_points_list` : liste des points 3D par image
+   - `image_points_list` : liste des points 2D par image
+
+3. Appliquer la fonction OpenCV :
 
 ```python
-# Exemple de calibration
 ret, K, dist, rvecs, tvecs = cv2.calibrateCamera(
-    objectPoints=real_world_points,  # Ex : grille 3D des coins
-    imagePoints=detected_corners,    # Coins détectés dans les images
-    imageSize=(width, height),       # Taille des images
+    object_points_list,
+    image_points_list,
+    image_size=(width, height),
     cameraMatrix=None,
     distCoeffs=None
 )
 ```
+
+4. Récupérer :
+
+    `K` : matrice de calibration (intrinsèques)
+
+    `dist` : coefficients de distorsion
+
+    `rvecs, tvecs` : poses de la caméra pour chaque image
 
 ## Conclusion
 

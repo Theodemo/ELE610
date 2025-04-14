@@ -46,7 +46,9 @@ def reduce_image_noise(image_path):
     image = cv2.imread(image_path)
 
     # Appliquer un filtre gaussien pour réduire le bruit
-    denoised_image = cv2.medianBlur(image,5)
+    #denoised_image = cv2.medianBlur(image, 30)
+    #denoised_image = cv2.GaussianBlur(image, (5, 5), 0)
+    denoised_image = cv2.bilateralFilter(image,9,75,75)
 
     # Enregistrer l'image traitée
     cv2.imwrite("final_project/image/denoised_image.png", denoised_image)
@@ -117,9 +119,18 @@ def decode_QR_code(image_path):
                 print("Decoded text:", obj.data.decode('utf-8'))
 
                 # Print corner points
-                print("The four corners of the QR code are:")
-                for i, point in enumerate(points):
-                    print(f"Point {i+1}: ({point.x}, {point.y})")
+                #print("The four corners of the QR code are:")
+                #for i, point in enumerate(points):
+                #    print(f"Point {i+1}: ({point.x}, {point.y})")
+                    
+                # === Calcul du centre ===
+                cx = sum(point.x for point in points) / 4
+                cy = sum(point.y for point in points) / 4
+                center = (int(cx), int(cy))
+                print(f"Centre du QR code : ({center[0]}, {center[1]})")
+                
+                # Dessiner le centre sur l'image
+                cv2.circle(image, center, 5, (255, 0, 255), -1)  # Rose/violet
 
                 # Orientation angle: vector from point 1 to point 4
                 p1 = points[0]
@@ -130,7 +141,7 @@ def decode_QR_code(image_path):
                 angle_rad = math.atan2(dy, dx)
                 angle_deg = math.degrees(angle_rad)
 
-                print(f"Orientation angle: {angle_deg:.2f}°")
+                #print(f"Orientation angle: {angle_deg:.2f}°")
 
                 # Draw the angle line and arrow on image (optional)
                 cv2.arrowedLine(image, (p1.x, p1.y), (p4.x, p4.y), (0, 0, 255), 2, tipLength=0.2)
@@ -148,11 +159,12 @@ if __name__ == "__main__":
     # Réduire le bruit de l'image capturée
     reduce_image_noise("final_project/image/puck_image.png")
     
-    #binariser l'image debruitée
-    binarize_image("final_project/image/denoised_image.png")
-
     # Augmenter le contraste de l'image binaire
-    increase_contrast("final_project/image/binary_image.png")
+    increase_contrast("final_project/image/denoised_image.png")
+    
+    #binariser l'image debruitée
+    #binarize_image("final_project/image/contrast_image.png")
+
     
     # Décoder le QR code de l'image capturée
     #decode_QR_code("final_project/image/QR_code_test.png")
