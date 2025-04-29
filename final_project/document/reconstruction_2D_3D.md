@@ -155,3 +155,315 @@ success, rvec, tvec = cv2.solvePnP(
 # Reprojection (pour vérifier)
 projected_point, _ = cv2.projectPoints(object_points, rvec, tvec, K, None)
 print("Point reprojeté :", projected_point)
+
+```
+
+
+
+### Position -100 -100
+
+Decoded text: Puck #2
+Centre du QR code : (172, 588)
+Decoded text: Puck #3
+Centre du QR code : (656, 579)
+Decoded text: Puck #7
+Centre du QR code : (404, 100)
+Decoded text: Puck #4
+Centre du QR code : (415, 585)
+Decoded text: Puck #1
+Centre du QR code : (407, 342)
+
+### Position -100 0
+
+Decoded text: Puck #2
+Centre du QR code : (414, 582)
+Decoded text: Puck #3
+Centre du QR code : (902, 576)
+Decoded text: Puck #8
+Centre du QR code : (410, 347)
+Decoded text: Puck #7
+Centre du QR code : (648, 93)
+Decoded text: Puck #6
+Centre du QR code : (404, 100)
+Decoded text: Puck #4
+Centre du QR code : (657, 580)
+Decoded text: Puck #1
+Centre du QR code : (648, 337)
+Decoded text: Puck #5
+Centre du QR code : (896, 329)
+
+### Position -100 100
+
+Decoded text: Puck #2
+Centre du QR code : (656, 577)
+Decoded text: Puck #8
+Centre du QR code : (652, 342)
+Decoded text: Puck #6
+Centre du QR code : (648, 94)
+Decoded text: Puck #4
+Centre du QR code : (902, 577)
+Decoded text: Puck #1
+Centre du QR code : (894, 330)
+
+### Position 0 -100
+
+Decoded text: Puck #2
+Centre du QR code : (177, 830)
+Decoded text: Puck #4
+Centre du QR code : (418, 829)
+Decoded text: Puck #3
+Centre du QR code : (661, 825)
+Decoded text: Puck #5
+Centre du QR code : (655, 578)
+Decoded text: Puck #1
+Centre du QR code : (411, 583)
+Decoded text: Puck #7
+Centre du QR code : (409, 344)
+
+### Position 0 0 500
+
+Decoded text: Puck #2
+Centre du QR code : (418, 827)
+Decoded text: Puck #3
+Centre du QR code : (908, 822)
+Decoded text: Puck #4
+Centre du QR code : (662, 826)
+Decoded text: Puck #1
+Centre du QR code : (653, 579)
+Decoded text: Puck #6
+Centre du QR code : (410, 345)
+Decoded text: Puck #7
+Centre du QR code : (652, 339)
+
+### Position 0 100
+
+Decoded text: Puck #6
+Centre du QR code : (652, 340)
+Decoded text: Puck #2
+Centre du QR code : (661, 823)
+Decoded text: Puck #3
+Centre du QR code : (1155, 819)
+Decoded text: Puck #8
+Centre du QR code : (657, 584)
+Decoded text: Puck #5
+Centre du QR code : (1150, 571)
+Decoded text: Puck #4
+Centre du QR code : (908, 823)
+Decoded text: Puck #1
+Centre du QR code : (899, 576)
+Decoded text: Puck #7
+Centre du QR code : (897, 333)
+
+### Position 100 -100
+
+Decoded text: Puck #8
+Centre du QR code : (177, 836)
+Decoded text: Puck #6
+Centre du QR code : (172, 592)
+Decoded text: Puck #1
+Centre du QR code : (415, 828)
+Decoded text: Puck #5
+Centre du QR code : (661, 823)
+Decoded text: Puck #7
+Centre du QR code : (414, 586)
+
+
+### Position 100 0
+
+Decoded text: Puck #6
+Centre du QR code : (652, 340)
+Decoded text: Puck #2
+Centre du QR code : (661, 823)
+Decoded text: Puck #3
+Centre du QR code : (1155, 819)
+Decoded text: Puck #8
+Centre du QR code : (657, 584)
+Decoded text: Puck #4
+Centre du QR code : (908, 823)
+Decoded text: Puck #5
+Centre du QR code : (1150, 571)
+Decoded text: Puck #1
+Centre du QR code : (899, 575)
+Decoded text: Puck #7
+Centre du QR code : (897, 333)
+
+### Position 100 100
+
+Decoded text: Puck #8
+Centre du QR code : (662, 829)
+Decoded text: Puck #6
+Centre du QR code : (656, 581)
+Decoded text: Puck #5
+Centre du QR code : (1155, 817)
+Decoded text: Puck #1
+Centre du QR code : (904, 822)
+Decoded text: Puck #7
+Centre du QR code : (902, 577)
+
+```python
+import cv2
+import numpy as np
+
+# Résolution de l'image (à adapter selon ta caméra)
+image_width = 1280
+image_height = 960
+image_size = (image_width, image_height)
+
+# Dictionnaire de correspondance Puck #X → coordonnées 3D
+puck_3D_positions = {
+    1: [0, 0, 30],
+    2: [0, 100, 30],
+    3: [100, 0, 30],
+    4: [100, 100, 30],
+    5: [0, -100, 30],
+    6: [-100, 0, 30],
+    7: [-100, -100, 30],
+    8: [-100, 100, 30],
+    9: [100, -100, 30]
+}
+
+# === Données à formater pour chaque image ===
+# Exemple de données (position de la caméra est juste informative ici)
+images_data = [
+    {
+        "camera_pos": [0, 0, 500],
+        "detections": {
+            3: (908, 137),
+            2: (418, 132),
+            6: (410, 613),
+            7: (652, 619),
+            1: (653, 379),
+            5: (901, 384),
+            4: (662, 133)
+        }
+    },
+    {
+        "camera_pos": [-100, -100, 500],
+        "detections": {
+            2: (172, 371),
+            3: (656, 380),
+            6: (163, 852),
+            7: (404, 859),
+            5: (651, 622),
+            4: (415, 374),
+            1: (407, 617)
+        }
+    },
+    {
+        "camera_pos": [-100, 0, 500],
+        "detections": {
+            2: (414, 377),
+            6: (404, 858),
+            8: (410, 612),
+            3: (902, 383),
+            7: (647, 865),
+            1: (648, 622),
+            5: (896, 629),
+            4: (656, 379)
+        }
+    },
+    {
+        "camera_pos": [-100, 100, 500],
+        "detections": {
+            6: (648, 865),
+            8: (652, 617),
+            2: (656, 381),
+            5: (1146, 635),
+            4: (902, 382),
+            7: (894, 873)
+        }
+    },
+    {
+        "camera_pos": [0, -100, 500],
+        "detections": {
+            6: (167, 610),
+            2: (177, 129),
+            3: (662, 134),
+            4: (419, 130),
+            7: (410, 615),
+            1: (411, 375),
+            5: (655, 381)
+        }
+    },
+    {
+        "camera_pos": [0, 100, 500],
+        "detections": {
+            8: (657, 374),
+            6: (652, 619),
+            3: (1155, 140),
+            2: (661, 135),
+            7: (897, 626),
+            1: (899, 383),
+            5: (1151, 387),
+            4: (908, 135)
+        }
+    },
+    {
+        "camera_pos": [100, -100, 500],
+        "detections": {
+            6: (172, 367),
+            8: (177, 122),
+            7: (414, 373),
+            5: (661, 135),
+            1: (415, 130)
+        }
+    },
+    {
+        "camera_pos": [100, 0, 500],
+        "detections": {
+            8: (657, 375),
+            3: (1155, 140),
+            6: (652, 619),
+            2: (661, 135),
+            5: (1150, 387),
+            1: (898, 383),
+            4: (908, 135),
+            7: (897, 626)
+        }
+    },
+    {
+        "camera_pos": [100, 100, 500],
+        "detections": {
+            6: (656, 377),
+            8: (662, 129),
+            5: (1154, 142),
+            7: (902, 381)
+        }
+    }
+]
+
+
+# === Création des listes pour OpenCV ===
+object_points_list = []
+image_points_list = []
+
+for img_data in images_data:
+    object_points = []
+    image_points = []
+
+    for puck_id, pixel_coords in img_data["detections"].items():
+        if puck_id in puck_3D_positions:
+            object_points.append(puck_3D_positions[puck_id])
+            image_points.append(pixel_coords)
+        else:
+            print(f"⚠️ Puck #{puck_id} non trouvé dans la map 3D")
+
+    object_points_list.append(np.array(object_points, dtype=np.float32))
+    image_points_list.append(np.array(image_points, dtype=np.float32))
+
+# === Calibration ===
+ret, K, dist, rvecs, tvecs = cv2.calibrateCamera(
+    object_points_list,
+    image_points_list,
+    image_size,
+    None,
+    None
+)
+
+# === Résultats ===
+print("✅ Calibration terminée")
+print("Matrice intrinsèque (K):\n", K)
+print("Coefficients de distorsion:\n", dist)
+print(f"Erreur RMS de reprojection: {ret:.4f}")
+
+```

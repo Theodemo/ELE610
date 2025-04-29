@@ -23,7 +23,7 @@ def take_picture():
         cv2.imshow("Captured Image", frame)
 
         # Enregistrer l'image dans un fichier
-        cv2.imwrite("final_project/image/puck_image.png", frame)
+        cv2.imwrite("final_project/image/puck_image_100_-100.png", frame)
         print("Image saved as puck_image.png")
 
         # Attendre une touche pour fermer la fenêtre
@@ -129,6 +129,7 @@ def decode_QR_code(image_path):
                 center = (int(cx), int(cy))
                 print(f"Centre du QR code : ({center[0]}, {center[1]})")
                 
+                
                 # Dessiner le centre sur l'image
                 cv2.circle(image, center, 5, (255, 0, 255), -1)  # Rose/violet
 
@@ -147,25 +148,81 @@ def decode_QR_code(image_path):
                 cv2.arrowedLine(image, (p1.x, p1.y), (p4.x, p4.y), (0, 0, 255), 2, tipLength=0.2)
                 cv2.putText(image, f"{angle_deg:.1f} deg", (p1.x + 10, p1.y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
         # Show image
+        cv2.imwrite("final_project/image/decoded_image_100_100.png",image)
         cv2.imshow("QR Code with Orientation", image)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
     else:
         print("No QR code found.")
-if __name__ == "__main__":
-    # Prendre une photo
-    #take_picture()
-       
-    # Réduire le bruit de l'image capturée
-    reduce_image_noise("final_project/image/puck_image.png")
-    
-    # Augmenter le contraste de l'image binaire
-    increase_contrast("final_project/image/denoised_image.png")
-    
-    #binariser l'image debruitée
-    #binarize_image("final_project/image/contrast_image.png")
+        
 
+def decode2_QR_code(image_path, camera_pos):
+    image = cv2.imread(image_path)
+    decoded_objects = decode(image)
+
+    detections = {}
+    if decoded_objects:
+        for obj in decoded_objects:
+            text = obj.data.decode('utf-8')
+            if "Puck #" in text:
+                puck_id = int(text.split("#")[1])
+                points = obj.polygon
+                if len(points) == 4:
+                    cx = sum(point.x for point in points) // 4
+                    cy = sum(point.y for point in points) // 4
+                    detections[puck_id] = (cx, cy)
+
+    return {
+        "camera_pos": camera_pos,
+        "detections": detections
+    }
+
+
+
+def flip_image(image_path, output_path):
+    # Charge l'image
+    img = cv2.imread(image_path)
     
-    # Décoder le QR code de l'image capturée
-    #decode_QR_code("final_project/image/QR_code_test.png")
-    decode_QR_code("final_project/image/contrast_image.png")
+    # Flip horizontalement (pour flip vertical, utiliser 0 pour l'axe vertical)
+    flipped_img = cv2.flip(img, 0)  # 1 = Flip horizontal, 0 = Flip vertical, -1 = Flip les deux axes
+    
+    # Sauvegarde l'image retournée
+    cv2.imwrite(output_path, flipped_img)
+    print(f"L'image a été retournée et enregistrée sous {output_path}")
+    
+
+if __name__ == "__main__":
+    camera_positions = [
+        [-100, -100], [-100, 0], [-100, 100],
+        [0, -100], [0, 0], [0, 100],
+        [100, -100], [100, 0], [100, 100]
+    ]
+
+    images_data = []
+
+    for x, y in camera_positions:
+        input_path = f"final_project/image/puck_image_{x}_{y}.png"
+        flipped_path = f"final_project/image/puck_image_{x}_{y}_f.png"
+
+        # Flip
+        flip_image(input_path, flipped_path)
+
+        # Traitement
+        reduce_image_noise(flipped_path)
+        increase_contrast("final_project/image/denoised_image.png")
+
+        # Decode et récupère les données dans le format voulu
+        data = decode2_QR_code("final_project/image/contrast_image.png", [x, y, 500])
+        images_data.append(data)
+
+    # Afficher la structure finale
+    print("images_data = [")
+    for item in images_data:
+        print("    {")
+        print(f"        \"camera_pos\": {item['camera_pos']},")
+        print("        \"detections\": {")
+        for k, v in item["detections"].items():
+            print(f"            {k}: {v},")
+        print("        }")
+        print("    },")
+    print("]")

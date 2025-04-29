@@ -1,65 +1,227 @@
 import cv2
 import numpy as np
 
-# Points 3D connus (en mm dans le repère table)
-object_points = np.array([
-    [0, -100, 0],
-    [100, -100, 0],
-    [100, 0, 0],
-    [-100, 100, 0]
-], dtype=np.float32)
+# Résolution de l'image (à adapter selon ta caméra)
+image_width = 1280
+image_height = 960
+image_size = (image_width, image_height)
 
-# Points image correspondants (en pixels)
-image_points = np.array([
-    [902, 368],
-    [897, 612],
-    [652, 606],
-    [414, 359]
-], dtype=np.float32)
+# Dictionnaire de correspondance Puck #X → coordonnées 3D
+puck_3D_positions = {
+    1: [0, 0, 30],
+    2: [0, 100, 30],
+    3: [100, 0, 30],
+    4: [100, 100, 30],
+    5: [0, -100, 30],
+    6: [-100, 0, 30],
+    7: [-100, -100, 30],
+    8: [-100, 100, 30],
+    9: [100, -100, 30]
+}
 
-# Hypothèse : on utilise une matrice de calibration fictive (à ajuster selon ton cas réel)
-focal_length = 1000  # à adapter selon ta caméra
-cx, cy = 1280 / 2, 960 / 2  # centre de l'image
+# === Données à formater pour chaque image ===
+# Exemple de données (position de la caméra est juste informative ici)
+images_data = [
+    {
+        "camera_pos": [-100, -100, 500],
+        "detections": {
+            2: (172, 588),
+            3: (656, 579),
+            7: (404, 100),
+            4: (415, 585),
+            1: (407, 342),
+        }
+    },
+    {
+        "camera_pos": [-100, 0, 500],
+        "detections": {
+            2: (414, 582),
+            3: (902, 576),
+            8: (410, 347),
+            7: (648, 93),
+            6: (404, 100),
+            4: (657, 580),
+            1: (648, 337),
+            5: (896, 329),
+        }
+    },
+    {
+        "camera_pos": [-100, 100, 500],
+        "detections": {
+            2: (656, 577),
+            8: (652, 342),
+            6: (648, 94),
+            4: (902, 577),
+            1: (894, 330),
+        }
+    },
+    {
+        "camera_pos": [0, -100, 500],
+        "detections": {
+            2: (177, 830),
+            4: (418, 829),
+            3: (661, 825),
+            5: (655, 578),
+            1: (411, 583),
+            7: (409, 344),
+        }
+    },
+    {
+        "camera_pos": [0, 0, 500],
+        "detections": {
+            2: (418, 827),
+            3: (908, 822),
+            4: (662, 826),
+            1: (653, 579),
+            6: (410, 345),
+            7: (652, 339),
+        }
+    },
+    {
+        "camera_pos": [0, 100, 500],
+        "detections": {
+            6: (652, 340),
+            2: (661, 823),
+            3: (1155, 819),
+            8: (657, 584),
+            5: (1150, 571),
+            4: (908, 823),
+            1: (899, 576),
+            7: (897, 333),
+        }
+    },
+    {
+        "camera_pos": [100, -100, 500],
+        "detections": {
+            8: (177, 836),
+            6: (172, 592),
+            1: (415, 828),
+            5: (661, 823),
+            7: (414, 586),
+        }
+    },
+    {
+        "camera_pos": [100, 0, 500],
+        "detections": {
+            6: (652, 340),
+            2: (661, 823),
+            3: (1155, 819),
+            8: (657, 584),
+            4: (908, 823),
+            5: (1150, 571),
+            1: (899, 575),
+            7: (897, 333),
+        }
+    },
+    {
+        "camera_pos": [100, 100, 500],
+        "detections": {
+            8: (662, 829),
+            6: (656, 581),
+            5: (1155, 817),
+            1: (904, 822),
+            7: (902, 577),
+        }
+    },
+]
 
-K = np.array([
-    [focal_length, 0, cx],
-    [0, focal_length, cy],
-    [0, 0, 1]
-], dtype=np.float64)
 
-# Pas de distorsion pour simplifier
-dist_coeffs = np.zeros((4, 1))
+# === Création des listes pour OpenCV ===
+object_points_list = []
+image_points_list = []
 
-# Estimation des paramètres via solvePnP
-success, rvec, tvec = cv2.solvePnP(object_points, image_points, K, dist_coeffs)
+for img_data in images_data:
+    object_points = []
+    image_points = []
 
-# Affichage des résultats
-print("Matrice de calibration (K) :")
-print(K)
+    for puck_id, pixel_coords in img_data["detections"].items():
+        if puck_id in puck_3D_positions:
+            object_points.append(puck_3D_positions[puck_id])
+            image_points.append(pixel_coords)
+        else:
+            print(f"⚠️ Puck #{puck_id} non trouvé dans la map 3D")
+
+    if len(object_points) >= 6:
+        object_points_list.append(np.array(object_points, dtype=np.float32))
+        image_points_list.append(np.array(image_points, dtype=np.float32))
 
 
+K_init = np.array([[1000, 0, image_width / 2],
+                   [0, 1000, image_height / 2],
+                   [0, 0, 1]], dtype=np.float32)
 
-# Matrice de rotation et vecteur de translation (exemple)
-R = np.eye(3)  # Caméra orientée comme le monde
-t = np.array([[0], [0], [500]])  # Caméra à l'origine
-
-# Coordonnée image (pixel)
-image_point = np.array([[740, 480]], dtype='float32')  # centre de l'image
-
-# Si on suppose que Z = 0 (objet sur le sol)
-object_points = np.array([
-    [0, 0, 0],  # point 3D supposé (plan du sol)
-], dtype='float32')
-
-# On utilise solvePnP pour retrouver la pose si on a plusieurs points
-success, rvec, tvec = cv2.solvePnP(
-    objectPoints=object_points,
-    imagePoints=image_point,
-    cameraMatrix=K,
+# === Calibration ===
+ret, K, dist, rvecs, tvecs = cv2.calibrateCamera(
+    object_points_list,
+    image_points_list,
+    image_size,
+    cameraMatrix=K_init,
     distCoeffs=None,
-    flags=cv2.SOLVEPNP_ITERATIVE
+    flags=cv2.CALIB_USE_INTRINSIC_GUESS
 )
 
-# Reprojection (pour vérifier)
-projected_point, _ = cv2.projectPoints(object_points, rvec, tvec, K, None)
-print("Point reprojeté :", projected_point)
+
+# === Résultats ===
+print("✅ Calibration terminée")
+print("Matrice intrinsèque (K):\n", K)
+print("Coefficients de distorsion:\n", dist)
+print(f"Erreur RMS de reprojection: {ret:.4f}")
+
+#if __name__ == "__main__":
+#    
+#    flip_image("final_project/image/puck_image_-100_-100.png", "final_project/image/puck_image_-100_-100_f.png")
+#    flip_image("final_project/image/puck_image_-100_0.png", "final_project/image/puck_image_-100_0_f.png")
+#    flip_image("final_project/image/puck_image_-100_100.png", "final_project/image/puck_image_-100_100_f.png")
+#    flip_image("final_project/image/puck_image_0_-100.png", "final_project/image/puck_image_0_-100_f.png")
+#    flip_image("final_project/image/puck_image_0_0.png", "final_project/image/puck_image_0_0_f.png")
+#    flip_image("final_project/image/puck_image_0_100.png", "final_project/image/puck_image_0_100_f.png")
+#    flip_image("final_project/image/puck_image_100_-100.png", "final_project/image/puck_image_100_-100_f.png")
+#    flip_image("final_project/image/puck_image_100_0.png", "final_project/image/puck_image_100_0_f.png")
+#    flip_image("final_project/image/puck_image_100_100.png", "final_project/image/puck_image_100_100_f.png")
+#
+#
+#    # Prendre une photo
+#    #take_picture()
+#    
+#    # Réduire le bruit de l'image capturée
+#
+#    reduce_image_noise("final_project/image/puck_image_-100_-100_f.png")
+#    increase_contrast("final_project/image/denoised_image.png")
+#    decode_QR_code("final_project/image/contrast_image.png")
+#    
+#    reduce_image_noise("final_project/image/puck_image_-100_0_f.png")
+#    increase_contrast("final_project/image/denoised_image.png")
+#    decode_QR_code("final_project/image/contrast_image.png")
+#    
+#    reduce_image_noise("final_project/image/puck_image_-100_100_f.png")
+#    increase_contrast("final_project/image/denoised_image.png")
+#    decode_QR_code("final_project/image/contrast_image.png")
+#    
+#    reduce_image_noise("final_project/image/puck_image_0_-100_f.png")
+#    increase_contrast("final_project/image/denoised_image.png")
+#    decode_QR_code("final_project/image/contrast_image.png")
+#    
+#    reduce_image_noise("final_project/image/puck_image_0_0_f.png")
+#    increase_contrast("final_project/image/denoised_image.png")
+#    decode_QR_code("final_project/image/contrast_image.png")
+#    
+#    reduce_image_noise("final_project/image/puck_image_0_100_f.png")
+#    increase_contrast("final_project/image/denoised_image.png")
+#    decode_QR_code("final_project/image/contrast_image.png")
+#    
+#    reduce_image_noise("final_project/image/puck_image_100_-100_f.png")
+#    increase_contrast("final_project/image/denoised_image.png")
+#    decode_QR_code("final_project/image/contrast_image.png")
+#    
+#    reduce_image_noise("final_project/image/puck_image_100_0_f.png")
+#    increase_contrast("final_project/image/denoised_image.png")
+#    decode_QR_code("final_project/image/contrast_image.png")
+#    
+#    reduce_image_noise("final_project/image/puck_image_100_100_f.png")
+#    increase_contrast("final_project/image/denoised_image.png")
+#    decode_QR_code("final_project/image/contrast_image.png")
+#    
+#
+    # Décoder le QR code de l'image capturée
+    #decode_QR_code("final_project/image/QR_code_test.png")
+    #decode_QR_code("final_project/image/contrast_image.png")
