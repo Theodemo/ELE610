@@ -50,6 +50,7 @@ def reduce_image_noise(image_path):
     #denoised_image = cv2.GaussianBlur(image, (5, 5), 0)
     denoised_image = cv2.bilateralFilter(image,9,75,75)
 
+
     # Enregistrer l'image traitée
     cv2.imwrite("final_project/image/denoised_image.png", denoised_image)
     print("Image denoised_image.png saved.")
@@ -209,10 +210,10 @@ if __name__ == "__main__":
 
         # Traitement
         reduce_image_noise(flipped_path)
-        increase_contrast("final_project/image/denoised_image.png")
+        #increase_contrast("final_project/image/denoised_image.png")
 
         # Decode et récupère les données dans le format voulu
-        data = decode2_QR_code("final_project/image/contrast_image.png", [x, y, 500])
+        data = decode2_QR_code("final_project/image/denoised_image.png", [x, y, 500])
         images_data.append(data)
 
     # Afficher la structure finale
@@ -226,3 +227,58 @@ if __name__ == "__main__":
         print("        }")
         print("    },")
     print("]")
+
+
+#if __name__ == "__main__":
+#    
+#    #flip_image("final_project/image/puck_image_-100_-100.png", "final_project/image/puck_image_-100_-100_f.png")
+#    #flip_image("final_project/image/puck_image_-100_0.png", "final_project/image/puck_image_-100_0_f.png")
+#    #flip_image("final_project/image/puck_image_-100_100.png", "final_project/image/puck_image_-100_100_f.png")
+#    #flip_image("final_project/image/puck_image_0_-100.png", "final_project/image/puck_image_0_-100_f.png")
+#    #flip_image("final_project/image/puck_image_0_0.png", "final_project/image/puck_image_0_0_f.png")
+#    #flip_image("final_project/image/puck_image_0_100.png", "final_project/image/puck_image_0_100_f.png")
+#    #flip_image("final_project/image/puck_image_100_-100.png", "final_project/image/puck_image_100_-100_f.png")
+#    #flip_image("final_project/image/puck_image_100_0.png", "final_project/image/puck_image_100_0_f.png")
+#    #flip_image("final_project/image/puck_image_100_100.png", "final_project/image/puck_image_100_100_f.png")
+#
+#
+#    # Prendre une photo
+#    #take_picture()
+#    
+#
+#    reduce_image_noise("final_project/image/puck_image_-100_-100_f.png")
+#    #increase_contrast("final_project/image/")
+#    decode_QR_code("final_project/image/denoised_image.png")
+#    
+#    #reduce_image_noise("final_project/image/puck_image_-100_0_f.png")
+#    #increase_contrast("final_project/image/denoised_image.png")
+#    #decode_QR_code("final_project/image/contrast_image.png")
+#    #
+#    #reduce_image_noise("final_project/image/puck_image_-100_100_f.png")
+#    #increase_contrast("final_project/image/denoised_image.png")
+#    #decode_QR_code("final_project/image/contrast_image.png")
+#    #
+#    #reduce_image_noise("final_project/image/puck_image_0_-100_f.png")
+#    #increase_contrast("final_project/image/denoised_image.png")
+#    #decode_QR_code("final_project/image/contrast_image.png")
+#    #
+#    #reduce_image_noise("final_project/image/puck_image_0_0_f.png")
+#    #increase_contrast("final_project/image/denoised_image.png")
+#    #decode_QR_code("final_project/image/contrast_image.png")
+#    #
+#    #reduce_image_noise("final_project/image/puck_image_0_100_f.png")
+#    #increase_contrast("final_project/image/denoised_image.png")
+#    #decode_QR_code("final_project/image/contrast_image.png")
+#    #
+#    #reduce_image_noise("final_project/image/puck_image_100_-100_f.png")
+#    #increase_contrast("final_project/image/denoised_image.png")
+#    #decode_QR_code("final_project/image/contrast_image.png")
+#    #
+#    #reduce_image_noise("final_project/image/puck_image_100_0_f.png")
+#    #increase_contrast("final_project/image/denoised_image.png")
+#    #decode_QR_code("final_project/image/contrast_image.png")
+#    #
+#    #reduce_image_noise("final_project/image/puck_image_100_100_f.png")
+#    #increase_contrast("final_project/image/denoised_image.png")
+#    #decode_QR_code("final_project/image/contrast_image.png")
+#    
