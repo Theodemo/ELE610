@@ -1,0 +1,5 @@
+MODULE LINKEDM
+    PROC Linked_m()
+
+    ENDPROC
+ENDMODULE
