@@ -1,5 +1,5 @@
 MODULE RS5RobotModule
-	! Author: Raphaël Gauthier
+	! Author: Théo de Morais
 	!------------------------------
 	! Communication variables
 	VAR num WPW              := 0;   !What Python Wants

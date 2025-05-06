@@ -2,7 +2,7 @@
 # For actions on dice
 
 _appFileName = "ImageViewer"
-_author = "Théo and Jesus" 
+_author = "Théo de Morais" 
 _version = "2025.02.6"
 
 # region Libraries
